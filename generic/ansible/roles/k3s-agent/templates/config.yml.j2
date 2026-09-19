@@ -1,0 +1,16 @@
+server: "{{ k3s_server_url }}"
+token: "{{ k3s_token }}"
+
+{% if k3s_node_labels %}
+node-label:
+{% for label in k3s_node_labels %}
+  - "{{ label }}"
+{% endfor %}
+{% endif %}
+
+{% if k3s_node_taints %}
+node-taint:
+{% for taint in k3s_node_taints %}
+  - "{{ taint }}"
+{% endfor %}
+{% endif %}

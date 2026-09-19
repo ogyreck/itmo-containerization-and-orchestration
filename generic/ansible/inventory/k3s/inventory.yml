@@ -1,0 +1,35 @@
+k3s_server:
+  hosts:
+    k3s-cp:
+      ansible_host: 192.168.1.20
+
+k3s_monitoring:
+  hosts:
+    k3s-mon:
+      ansible_host: 192.168.1.21
+  vars:
+    k3s_node_labels:
+      - "purpose=monitoring"
+    k3s_node_taints:
+      - "purpose=monitoring:NoSchedule"
+
+k3s_workers:
+  hosts:
+    k3s-w1:
+      ansible_host: 192.168.1.22
+    k3s-w2:
+      ansible_host: 192.168.1.23
+  vars:
+    k3s_node_labels:
+      - "purpose=workload"
+
+k3s_agents:
+  children:
+    k3s_monitoring:
+    k3s_workers:
+
+all:
+  vars:
+    k3s_version: "v1.36.4+k3s1"
+    k3s_server_url: "https://k3s-cp.lan:6443"
+    stand_k3s_token: "token-andron"

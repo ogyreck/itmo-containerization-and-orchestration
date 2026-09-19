@@ -1,0 +1,20 @@
+--- 
+
+- name: "Настройка системы"
+  hosts: "all"
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Установка оснавных пакетов"
+      ansible.builtin.apt:
+        name: 
+        - "vim"
+        - "curl"
+        - "htop"
+        - "wget"
+        - "unzip"
+        - "net-tools"
+        - "rsyslog"
+
+        state: present
+        update_cache: true 

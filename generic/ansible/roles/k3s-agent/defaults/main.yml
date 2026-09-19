@@ -1,0 +1,11 @@
+---
+k3s_config_dir: "/etc/rancher/k3s"
+k3s_config_file: "{{ k3s_config_dir }}/config.yaml"
+
+k3s_server_url: "https://k3s-cp.lan:6443"
+k3s_token: "{{ stand_k3s_token }}"
+
+k3s_local_kubeconfig: "{{ lookup('env', 'HOME') }}/.kube/k3s-lab.yaml"
+
+k3s_node_labels: []
+k3s_node_taints: []

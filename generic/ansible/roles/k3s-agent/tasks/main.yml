@@ -1,0 +1,45 @@
+---
+- name: "Создаем директорию {{ k3s_config_dir }}"
+  ansible.builtin.file:
+    path: "{{ k3s_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "Создать конфигурационный файл config.yaml для K3s Агента"
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ k3s_config_file }}"
+    mode: '0600'
+  notify: "Перезапустить k3s-agent"
+
+- name: "Узнать установленную версию k3s"
+  ansible.builtin.command: /usr/local/bin/k3s --version
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+
+- name: "Скачать и запустить инсталлятор K3s в режиме Агента"
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -sfL https://get.k3s.io | sh -
+  args:
+    executable: /bin/bash
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    K3S_URL: "{{ k3s_server_url }}"
+    K3S_TOKEN: "{{ k3s_token }}"
+  when: k3s_version not in (k3s_installed.stdout | default(''))
+
+- name: "Убедиться, что сервис k3s-agent включён и запущен"
+  ansible.builtin.systemd_service:
+    name: k3s-agent
+    enabled: true
+    state: started
+
+- name: "Дождаться, пока нода станет Ready"
+  ansible.builtin.command: >
+    /usr/local/bin/kubectl --kubeconfig {{ k3s_local_kubeconfig }}
+    wait --for=condition=Ready node/{{ inventory_hostname }} --timeout=180s
+  delegate_to: localhost
+  become: false
+  changed_when: false
