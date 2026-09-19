@@ -1,0 +1,17 @@
+---
+- ansible.builtin.import_playbook: "system.yml"
+  tags: ["setup", "never"]
+
+- name: "Устновка k3s control plane"
+  tags: ["setup", "k3s-cp", "never"]
+  hosts: "k3s_server"
+  become: true
+  roles:
+    - role: "k3s-cp"
+
+- name: "Установка k3s агентов"
+  tags: ["setup", "k3s-agent", "never"]
+  hosts: "k3s_agents"
+  become: true
+  roles:
+    - role: "k3s-agent"

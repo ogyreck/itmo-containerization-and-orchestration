@@ -1,0 +1,70 @@
+---
+- name: "Создаем директорию {{ k3s_config_dir }}"
+  ansible.builtin.file:
+    path: "{{ k3s_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "Создать конфигурационный файл config.yaml для K3s"
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ k3s_config_file }}"
+    mode: '0600'
+  notify: "Перезапустить k3s"
+
+- name: "Узнать установленную версию k3s"
+  ansible.builtin.command: /usr/local/bin/k3s --version
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+
+- name: "Скачать и запустить инсталлятор K3s с заданной версией"
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -sfL https://get.k3s.io | sh -
+  args:
+    executable: /bin/bash
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+  when: k3s_version not in (k3s_installed.stdout | default(''))
+
+- name: "Убедиться, что сервис k3s включён и запущен"
+  ansible.builtin.systemd_service:
+    name: k3s
+    enabled: true
+    state: started
+
+# Проверка, что все поставилось
+
+- name: "Ожидание генерации файла kubeconfig (k3s.yaml)"
+  ansible.builtin.wait_for:
+    path: "{{ k3s_config_dir }}/k3s.yaml"
+    state: present
+    timeout: 200
+
+- name: "Ожидание готовности ноды (статус Ready)"
+  ansible.builtin.command: /usr/local/bin/kubectl wait --for=condition=Ready node --all --timeout=180s
+  changed_when: false
+
+#Это моя гордость, автоматом проложить конфиг от кубера на ноут
+- name: "Прочитать содержимое файла k3s.yaml"
+  ansible.builtin.slurp:
+    src: "{{ k3s_config_dir }}/k3s.yaml"
+  register: k3s_kubeconfig_encoded
+
+- name: "Создать каталог для kubeconfig на ноутбуке"
+  ansible.builtin.file:
+    path: "{{ k3s_local_kubeconfig | dirname }}"
+    state: directory
+    mode: '0700'
+  delegate_to: localhost
+  become: false
+
+- name: "Сохранить kubeconfig на ноутбук, подставив адрес {{ k3s_tls_san }}"
+  ansible.builtin.copy:
+    content: "{{ k3s_kubeconfig_encoded.content | b64decode | replace('127.0.0.1', k3s_tls_san) }}"
+    dest: "{{ k3s_local_kubeconfig }}"
+    mode: '0600'
+  delegate_to: localhost
+  become: false
+  no_log: true
