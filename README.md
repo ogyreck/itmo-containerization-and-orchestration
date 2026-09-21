@@ -10,6 +10,8 @@
 
 [Лабораторная 1 - Docker](lab1-docker) - Первая лабораторная работа
 
+[Лабораторная 2 - Мониторинг сервиса: метрики, логи, трейсы](lab2-monitoring)
 
-### Задания по лабораторный работам
+
+### Задания по лабораторным работам
 Все задания по лабораторным работам пердствленны в репозитории: [https://github.com/KeladKaal/containerization-and-orchestration](https://github.com/KeladKaal/containerization-and-orchestration)

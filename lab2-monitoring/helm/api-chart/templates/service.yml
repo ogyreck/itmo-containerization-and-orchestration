@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Release.Name }}-svc"
+  labels:
+    app: lab-api
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: web         
+      port: {{ .Values.service.port }}
+      targetPort: http   
+      nodePort: {{ .Values.service.nodePort }}
+  selector:
+    app: lab-api
+  

@@ -1,0 +1,109 @@
+prometheus:
+  prometheusSpec:
+    nodeSelector: 
+      purpose: monitoring
+
+
+    tolerations:
+      - key: "purpose"
+        operator: "Equal"
+        value: "monitoring"
+        effect: "NoSchedule"        
+
+    retention: "5d"           
+    retentionSize: "8GiB"   
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "local-path"
+          accessModes: ["ReadWriteOnce"] 
+          resources:
+            requests:
+              storage: 10Gi         
+  
+    # тут вообще хз  что это и как конифгурировать 
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+  
+  service:
+    type: NodePort
+    nodePort: 32001 
+
+grafana:
+  nodeSelector:
+    purpose: monitoring
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "monitoring"
+      effect: "NoSchedule"
+  
+  adminPassword: "admin"
+  
+  persistence:
+    enabled: true
+    storageClassName: "local-path"
+    accessModes: ["ReadWriteOnce"]
+    size: 5Gi  
+
+      
+  service:
+    type: NodePort
+    nodePort: 32002 
+
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      purpose: monitoring
+    tolerations:
+      - key: "purpose"
+        operator: "Equal"
+        value: "monitoring"
+        effect: "NoSchedule"
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "local-path"
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+  
+  service:
+    type: NodePort
+    nodePort: 32003
+
+prometheusOperator:
+  nodeSelector:
+    purpose: monitoring
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "monitoring"
+      effect: "NoSchedule"
+
+
+kube-state-metrics:
+  nodeSelector:
+    purpose: monitoring
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "monitoring"
+      effect: "NoSchedule"
+
+prometheus-node-exporter:
+  # сразу на всех нодах 
+  tolerations:
+    - operator: "Exists"
+
+
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false 
