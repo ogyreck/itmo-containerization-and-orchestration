@@ -1,0 +1,91 @@
+controller:
+  type: daemonset
+  tolerations:
+    - operator: "Exists"
+
+rbac:
+  create: true       
+
+alloy:
+  clustering:
+    enabled: false    
+
+  mounts:
+    varlog: true      
+
+  resources: 
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "826Mi"
+      cpu: "500m"   
+
+  configMap:
+    content: |-
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      discovery.relabel "pods" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod_name"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "pod_container_name"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          target_label  = "pod_node_name"
+        }
+        rule {
+          source_labels = [
+            "__meta_kubernetes_namespace",
+            "__meta_kubernetes_pod_name",
+            "__meta_kubernetes_pod_uid",
+            "__meta_kubernetes_pod_container_name",
+          ]
+          separator    = "_"
+          regex        = "(.*)_(.*)_(.*)_(.*)"
+          replacement  = "/var/log/pods/${1}_${2}_${3}/${4}/*.log"
+          target_label = "__path__"
+        }
+      }
+
+      local.file_match "pod_logs" {
+        path_targets = discovery.relabel.pods.output
+        sync_period  = "10s"
+      }
+      
+      loki.process "cri" {
+        forward_to = [loki.write.default.receiver]
+
+        stage.cri {}
+      }
+
+      loki.source.file "pods" {
+        targets    = local.file_match.pod_logs.targets
+        forward_to = [loki.process.cri.receiver]
+      }
+
+      loki.write "default" {
+        endpoint {
+          url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }
+serviceMonitor:
+  enabled: true
+
+
+service:
+  enabled: true
+  type: NodePort
+  nodePort: 32020

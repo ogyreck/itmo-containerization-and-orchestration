@@ -39,3 +39,8 @@ spec:
               path: /health
               port: http
             periodSeconds: 10
+          env:
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: "{{ .Values.jager_env.endpoint }}"
+          - name: OTEL_SERVICE_NAME
+            value: "{{ .Values.jager_env.service_name }}"

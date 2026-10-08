@@ -1,0 +1,48 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: "{{ .Release.Name }}-rules"
+  labels:
+    app: lab-api
+    release: kps
+spec:
+  groups:
+    - name: api.rules
+      interval: 30s
+      rules:
+
+        - alert: ApiHighErrorRate
+          expr: |
+            sum(rate(api_requests_total{namespace="lab2", status=~"5.."}[5m]))
+              /
+            sum(rate(api_requests_total{namespace="lab2"}[5m]))
+              > {{ .Values.alerts.errorRatio }}
+          for: {{ .Values.alerts.errorRatioFor }}
+          labels:
+            severity: critical
+          annotations:
+            summary: "Сервис api отдаёт ошибки"
+            description: "Доля 5xx — за последние 5 минут."
+
+        - alert: ApiHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le, path) (rate(api_request_duration_seconds_bucket{namespace="lab2"}[5m]))
+            ) > {{ .Values.alerts.latencyP95Seconds }}
+          for: {{ .Values.alerts.latencyFor }}
+          labels:
+            severity: warning
+          annotations:
+            summary: "api отвечает медленно"
+            description: "p95 — процентиль превышен,  посмотрите логи и трейсы"
+
+
+        - alert: ApiDown
+          expr: |
+            (up{job="api-svc"} == 0) OR (absent(up{job="api-svc"}) == 1)
+          for: {{ .Values.alerts.downFor }}
+          labels:
+            severity: critical
+          annotations:
+            summary: "api не отвечает"
+            description: "Проверьте работоспособность сервиса, на данный момент по не доступен"
