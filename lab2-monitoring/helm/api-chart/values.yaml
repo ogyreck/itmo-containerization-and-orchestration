@@ -1,0 +1,22 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/ogyreck/lab-api
+  pullPolicy: IfNotPresent
+  tag: "0.1.0"
+
+jager_env:
+  endpoint: "http://jaeger.monitoring.svc.cluster.local:4318"
+  service_name: "api"
+
+service:
+  type: NodePort
+  port: 8080
+  nodePort: 32010
+
+alerts:
+  errorRatio: 0.05
+  errorRatioFor: 5m
+  latencyP95Seconds: 1
+  latencyFor: 10m
+  downFor: 2m

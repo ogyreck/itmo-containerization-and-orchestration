@@ -1,0 +1,54 @@
+repositories:
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
+  - name: jaegertracing
+    url: https://jaegertracing.github.io/helm-charts
+
+releases:
+  - name: kps
+    namespace: monitoring
+    createNamespace: true
+    chart: oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack
+    version: 91.4.1
+    values:
+      - values-pga.yaml
+
+  - name: loki
+    namespace: monitoring
+    chart: grafana/loki
+    version: 7.3.0
+    values:
+      - values-loki.yaml
+
+  - name: alloy
+    namespace: monitoring
+    chart: grafana/alloy
+    version: 1.12.1
+    needs:
+      - monitoring/loki
+    values:
+      - values-alloy.yaml
+
+  - name: jaeger
+    namespace: monitoring
+    chart: jaegertracing/jaeger
+    version: 4.14.0
+    values:
+      - values-jaeger.yaml
+
+  - name: karma
+    namespace: monitoring
+    chart: ./karma-chart
+    needs:
+      - monitoring/kps
+    values:
+      - karma-chart/values.yaml
+
+  - name: api
+    namespace: lab2
+    createNamespace: true
+    chart: ./api-chart
+    needs:
+      - monitoring/kps
+    values:
+      - api-chart/values.yaml

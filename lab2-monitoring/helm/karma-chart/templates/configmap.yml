@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ .Release.Name }}-config"
+data:
+  karma.yaml: |
+    alertmanager:
+      interval: {{ .Values.alertmanager.interval }}
+      servers:
+        - name: {{ .Values.alertmanager.name }}
+          uri: {{ .Values.alertmanager.uri }}
+          timeout: {{ .Values.alertmanager.timeout }}
+    listen:
+      port: {{ .Values.service.port }}
