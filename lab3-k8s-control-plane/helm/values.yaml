@@ -1,0 +1,40 @@
+api:
+  replicaCount: 4
+  image:
+    repository: ghcr.io/ogyreck/shop-api
+    tag: "0.2.0"
+    pullPolicy: IfNotPresent
+  port: 8080
+  healthFail: false
+  preStopSleepSeconds: 5
+  service:
+    port: 80
+    nodePort: 32040
+
+worker:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/ogyreck/shop-worker
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  port: 8080
+
+postgres:
+  enabled: true
+  instances: 1                     
+  image:
+    repository: ghcr.io/ogyreck/postgresql
+    tag: "18.4-system-trixie"
+  storage:
+    size: 1Gi
+    storageClass: ""               
+  database: shop
+  owner: shop
+
+alerts:
+  errorRatio: 0.05            
+  errorRatioFor: 2m
+  latencyP95Seconds: 0.5
+  latencyFor: 5m
+  workerStalledSeconds: 60    
+  workerStalledFor: 1m
