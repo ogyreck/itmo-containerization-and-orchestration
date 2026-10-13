@@ -1,0 +1,155 @@
+---
+# запрет запуска контейнеров от root
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedValidatingPolicy
+metadata:
+  name: disallow-root
+  namespace: lab3
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets, daemonsets, jobs, cronjobs]
+  variables:
+    - name: allContainers
+      expression: >-
+        object.spec.containers
+        + object.spec.?initContainers.orValue([])
+        + object.spec.?ephemeralContainers.orValue([])
+    - name: podRunAsNonRoot
+      expression: "object.spec.?securityContext.?runAsNonRoot.orValue(false)"
+  validations:
+    - expression: >-
+        variables.allContainers.all(c,
+          c.?securityContext.?runAsNonRoot.orValue(variables.podRunAsNonRoot) == true)
+      message: "securityContext.runAsNonRoot должен быть true (на уровне пода или каждого контейнера)"
+    - expression: >-
+        object.spec.?securityContext.?runAsUser.orValue(1) != 0 &&
+        variables.allContainers.all(c, c.?securityContext.?runAsUser.orValue(1) != 0)
+      message: "runAsUser: 0 запрещён"
+
+---
+# образы только из личного Github ghcr.io/ogyreck/
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedValidatingPolicy
+metadata:
+  name: allowed-registry
+  namespace: lab3
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets, daemonsets, jobs, cronjobs]
+  variables:
+    - name: allContainers
+      expression: >-
+        object.spec.containers
+        + object.spec.?initContainers.orValue([])
+        + object.spec.?ephemeralContainers.orValue([])
+  validations:
+    - expression: "variables.allContainers.all(c, c.image.startsWith('ghcr.io/ogyreck/'))"
+      messageExpression: >-
+        'Разрешены только образы из ghcr.io/ogyreck/. Нарушают: ' +
+        variables.allContainers.filter(c, !c.image.startsWith('ghcr.io/ogyreck/')).map(c, c.image).join(', ')
+
+---
+# обязательные лейблы
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedValidatingPolicy
+metadata:
+  name: require-labels
+  namespace: lab3
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  autogen:                           
+    podControllers:
+      controllers: [deployments, statefulsets, daemonsets, jobs, cronjobs]
+  variables:
+    - name: required
+      expression: "['app.kubernetes.io/name', 'lab']"
+    - name: labels
+      expression: "object.metadata.?labels.orValue({})"
+  validations:
+    - expression: "variables.required.all(l, l in variables.labels)"
+      messageExpression: >-
+        'Отсутствуют обязательные лейблы: ' +
+        variables.required.filter(l, !(l in variables.labels)).join(', ')
+
+---
+# обязательные requests и limits
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedValidatingPolicy
+metadata:
+  name: require-resources
+  namespace: lab3
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets, daemonsets, jobs, cronjobs]
+  variables:
+    - name: containers
+      expression: "object.spec.containers + object.spec.?initContainers.orValue([])"
+  validations:
+    - expression: >-
+        variables.containers.all(c,
+          c.?resources.?requests.?cpu.hasValue() &&
+          c.?resources.?requests.?memory.hasValue() &&
+          c.?resources.?limits.?memory.hasValue())
+      message: "У каждого контейнера должны быть requests.cpu, requests.memory и limits.memory"
+
+---
+# запрет privileged и повышения привилегий
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedValidatingPolicy
+metadata:
+  name: disallow-privilege-escalation
+  namespace: lab3
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets, daemonsets, jobs, cronjobs]
+  variables:
+    - name: allContainers
+      expression: >-
+        object.spec.containers
+        + object.spec.?initContainers.orValue([])
+        + object.spec.?ephemeralContainers.orValue([])
+  validations:
+    - expression: "variables.allContainers.all(c, c.?securityContext.?privileged.orValue(false) == false)"
+      message: "privileged: true запрещён"
+    - expression: >-
+        variables.allContainers.all(c,
+          c.?securityContext.?allowPrivilegeEscalation.orValue(true) == false)
+      message: "securityContext.allowPrivilegeEscalation должен быть явно false"

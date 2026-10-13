@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privileged
+  namespace: lab3
+  labels:
+    app.kubernetes.io/name: kyverno-test
+    lab: lab3
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+  containers:
+    - name: app
+      image: ghcr.io/ogyreck/shop-api:0.2.0
+      securityContext:
+        privileged: true
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          memory: 128Mi
