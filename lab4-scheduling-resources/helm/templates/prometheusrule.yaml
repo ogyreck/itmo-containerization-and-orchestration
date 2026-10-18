@@ -50,7 +50,7 @@ spec:
             summary: "shop worker не обрабатывает заказы"
             description: "Ни одна реплика worker не завершала успешный цикл больше {{ .Values.alerts.workerStalledSeconds }}s. Заказов в очереди: смотри shop_orders_pending."
 
-    # Лаба 4: защищён ли критический путь при нехватке ресурсов
+    # Лаба 4
     - name: shop.capacity
       rules:
         - alert: ShopOrderSLABreach

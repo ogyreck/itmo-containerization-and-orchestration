@@ -65,7 +65,7 @@ batch:
   port: 8080
   load:
     cpuWorkers: 1        
-    memoryMB: 2100      
+    memoryMB: 16     
     memoryStepMB: 16
     memoryStepPeriod: 2s
   resources:
@@ -74,7 +74,7 @@ batch:
       memory: 256Mi       
     limits:
       cpu: 64m
-      memory: 2Gi
+      memory: 256Mi
 
 
 postgres:
@@ -105,7 +105,7 @@ alerts:
   workerStalledSeconds: 60    
   workerStalledFor: 1m
   # лаба 4
-  slaLatencySeconds: "0.25"   # граница бакета гистограммы
+  slaLatencySeconds: "0.25"  
   slaRatio: 0.95
   slaFor: 2m
   unschedulableFor: 2m
