@@ -14,3 +14,10 @@ node-taint:
   - "{{ taint }}"
 {% endfor %}
 {% endif %}
+
+{% if k3s_kubelet_args %}
+kubelet-arg:
+{% for arg in k3s_kubelet_args %}
+  - "{{ arg }}"
+{% endfor %}
+{% endif %}

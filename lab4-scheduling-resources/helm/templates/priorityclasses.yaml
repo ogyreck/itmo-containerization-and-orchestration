@@ -1,0 +1,14 @@
+{{- range $name, $pc := .Values.priorityClasses }}
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ $.Release.Name }}-{{ $name }}
+  labels:
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    lab: lab3
+value: {{ $pc.value }}
+globalDefault: false
+preemptionPolicy: {{ $pc.preemptionPolicy | default "PreemptLowerPriority" }}
+description: {{ $pc.description | quote }}
+{{- end }}

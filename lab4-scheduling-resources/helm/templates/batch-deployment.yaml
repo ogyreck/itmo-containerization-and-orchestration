@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-batch
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: shop-batch
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    lab: lab3
+spec:
+  replicas: {{ .Values.batch.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shop-batch
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: shop-batch
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        lab: lab3
+    spec:
+      nodeSelector:
+        purpose: workload
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      containers:
+        - name: shop-batch
+          image: "{{ .Values.batch.image.repository }}:{{ .Values.batch.image.tag }}"
+          imagePullPolicy: {{ .Values.batch.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.batch.port }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          env:
+            - name: CPU_WORKERS
+              value: {{ .Values.batch.load.cpuWorkers | quote }}
+            - name: MEMORY_MB
+              value: {{ .Values.batch.load.memoryMB | quote }}
+            - name: MEMORY_STEP_MB
+              value: {{ .Values.batch.load.memoryStepMB | quote }}
+            - name: MEMORY_STEP_PERIOD
+              value: {{ .Values.batch.load.memoryStepPeriod | default "1s" | quote }}
+          resources:
+            {{- toYaml .Values.batch.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 4
+      priorityClassName: {{ .Release.Name }}-{{ .Values.batch.priorityClass }} 
+      

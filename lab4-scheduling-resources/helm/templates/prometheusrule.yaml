@@ -1,0 +1,87 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-rules
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: shop
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    lab: lab3
+    release: kps
+spec:
+  groups:
+    - name: shop.rules
+      rules:
+        - alert: ShopApiHighErrorRate
+          expr: |
+            sum(rate(api_requests_total{namespace="{{ .Release.Namespace }}", path!="/health", status=~"5.."}[5m]))
+              /
+            sum(rate(api_requests_total{namespace="{{ .Release.Namespace }}", path!="/health"}[5m]))
+              > {{ .Values.alerts.errorRatio }}
+          for: {{ .Values.alerts.errorRatioFor }}
+          labels:
+            severity: critical
+          annotations:
+            summary: "shop api: доля ошибок 5xx {{`{{ $value | humanizePercentage }}`}}"
+            description: "Больше {{ .Values.alerts.errorRatio | mulf 100 }}% запросов к /order и /orders завершаются 5xx дольше {{ .Values.alerts.errorRatioFor }}. Частая причина — недоступен postgres (смотри api_db_errors_total)."
+
+        # p95 
+        - alert: ShopApiHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (rate(api_request_duration_seconds_bucket{namespace="{{ .Release.Namespace }}", path!="/health"}[5m]))
+            ) > {{ .Values.alerts.latencyP95Seconds }}
+          for: {{ .Values.alerts.latencyFor }}
+          labels:
+            severity: warning
+          annotations:
+            summary: "shop api: p95 латентности {{`{{ $value | humanizeDuration }}`}}"
+            description: "95-й перцентиль времени ответа /order и /orders выше {{ .Values.alerts.latencyP95Seconds }}s дольше {{ .Values.alerts.latencyFor }}."
+
+        - alert: ShopWorkerStalled
+          expr: |
+            time() - max(worker_last_success_timestamp_seconds{namespace="{{ .Release.Namespace }}"}) > {{ .Values.alerts.workerStalledSeconds }}
+              or
+            absent(worker_last_success_timestamp_seconds{namespace="{{ .Release.Namespace }}"})
+          for: {{ .Values.alerts.workerStalledFor }}
+          labels:
+            severity: critical
+          annotations:
+            summary: "shop worker не обрабатывает заказы"
+            description: "Ни одна реплика worker не завершала успешный цикл больше {{ .Values.alerts.workerStalledSeconds }}s. Заказов в очереди: смотри shop_orders_pending."
+
+    # Лаба 4
+    - name: shop.capacity
+      rules:
+        - alert: ShopOrderSLABreach
+          expr: |
+            sum(rate(api_request_duration_seconds_bucket{namespace="{{ .Release.Namespace }}", path="/order", le="{{ .Values.alerts.slaLatencySeconds }}"}[2m]))
+              /
+            sum(rate(api_request_duration_seconds_count{namespace="{{ .Release.Namespace }}", path="/order"}[2m]))
+              < {{ .Values.alerts.slaRatio }}
+          for: {{ .Values.alerts.slaFor }}
+          labels:
+            severity: critical
+          annotations:
+            summary: "SLA заказов нарушен: быстрее {{ .Values.alerts.slaLatencySeconds }}s только {{`{{ $value | humanizePercentage }}`}}"
+            description: "Меньше {{ .Values.alerts.slaRatio | mulf 100 }}% запросов POST /order укладываются в {{ .Values.alerts.slaLatencySeconds }}s дольше {{ .Values.alerts.slaFor }}."
+
+        - alert: ShopCriticalPodUnschedulable
+          expr: |
+            max by (pod) (kube_pod_status_unschedulable{namespace="{{ .Release.Namespace }}", pod=~"{{ .Release.Name }}-(api|pg).*"}) > 0
+          for: {{ .Values.alerts.unschedulableFor }}
+          labels:
+            severity: critical
+          annotations:
+            summary: "Под критического пути {{`{{ $labels.pod }}`}} не может встать"
+            description: "Pod {{`{{ $labels.pod }}`}} дольше {{ .Values.alerts.unschedulableFor }} не помещается ни на одну ноду, и preemption не помог. batch намеренно не учитывается: его Pending — штатное поведение."
+
+        - alert: ShopNodeMemoryPressure
+          expr: |
+            max by (node) (kube_node_status_condition{condition="MemoryPressure", status="true", node=~"{{ .Values.alerts.workloadNodes }}"}) == 1
+          for: {{ .Values.alerts.memoryPressureFor }}
+          labels:
+            severity: warning
+          annotations:
+            summary: "MemoryPressure на {{`{{ $labels.node }}`}}"
+            description: "На ноде {{`{{ $labels.node }}`}} кончается память, kubelet выселяет поды. Пока первым уходит batch, это ожидаемо; если давление держится — следующим под угрозой критический путь."
