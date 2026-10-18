@@ -1,0 +1,31 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Release.Name }}-pg
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: shop-postgres
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    lab: lab3
+spec:
+  instances: {{ .Values.postgres.instances }}
+  imageName: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"   
+  inheritedMetadata:               
+    labels:                        
+      app.kubernetes.io/name: shop-postgres
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      lab: lab3
+  bootstrap:
+    initdb:                        
+      database: {{ .Values.postgres.database }}
+      owner: {{ .Values.postgres.owner }}
+  storage:
+    size: {{ .Values.postgres.storage.size }}
+    {{- with .Values.postgres.storage.storageClass }}
+    storageClass: {{ . }}
+    {{- end }}
+  resources:
+    {{- toYaml .Values.postgres.resources | nindent 4 }}
+  priorityClassName: {{ .Release.Name }}-{{ .Values.postgres.priorityClass }} 
+{{- end }}

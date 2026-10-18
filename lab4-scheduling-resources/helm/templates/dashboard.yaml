@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: shop
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    lab: lab3
+    grafana_dashboard: "1"
+  annotations:
+    k8s-sidecar-target-directory: "lab3"
+data:
+  shop.json: |
+{{ .Files.Get "dashboards/shop.json" | replace "__NAMESPACE__" .Release.Namespace | indent 4 }}

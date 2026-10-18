@@ -1,0 +1,113 @@
+priorityClasses:
+  high:
+    value: 100000
+    description: "Критический путь"
+  normal:
+    value: 10000
+    description: "Фоновые сервисы"
+  sacrificial:            # отрицательный: ниже всех подов без класса (у них 0)
+    value: -1000
+    preemptionPolicy: Never
+    description: "Вытесняемая нагрузка"
+
+api:
+  priorityClass: high
+  pdb:
+    enabled: true
+    maxUnavailable: 1
+  replicaCount: 3
+  spread:
+    topologyKey: kubernetes.io/hostname
+    maxSkew: 1
+    whenUnsatisfiable: DoNotSchedule  
+    nodeTaintsPolicy: Honor           
+  image:
+    repository: ghcr.io/ogyreck/shop-api
+    tag: "0.2.0"
+    pullPolicy: IfNotPresent
+  port: 8080
+  healthFail: false
+  preStopSleepSeconds: 5
+  service:
+    port: 80
+    nodePort: 32040
+  resources:
+    requests:
+      cpu: 100m
+      memory: 48Mi
+    limits:
+      cpu: 100m
+      memory: 48Mi
+
+worker:
+  priorityClass: normal
+  replicaCount: 2
+  image:
+    repository: ghcr.io/ogyreck/shop-worker
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  port: 8080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 40Mi
+    limits:
+      cpu: 50m
+      memory: 40Mi
+
+batch:
+  priorityClass: sacrificial
+  replicaCount: 1
+  image:
+    repository: ghcr.io/ogyreck/shop-batch
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  port: 8080
+  load:
+    cpuWorkers: 1        
+    memoryMB: 2100      
+    memoryStepMB: 16
+    memoryStepPeriod: 2s
+  resources:
+    requests:
+      cpu: 20m
+      memory: 256Mi       
+    limits:
+      cpu: 64m
+      memory: 2Gi
+
+
+postgres:
+  priorityClass: high
+  enabled: true
+  instances: 1                     
+  image:
+    repository: ghcr.io/ogyreck/postgresql
+    tag: "18.4-system-trixie"
+  storage:
+    size: 1Gi
+    storageClass: ""               
+  database: shop
+  owner: shop
+  resources:
+    requests:
+      cpu: 300m
+      memory: 512Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+alerts:
+  errorRatio: 0.05            
+  errorRatioFor: 2m
+  latencyP95Seconds: 0.5
+  latencyFor: 5m
+  workerStalledSeconds: 60    
+  workerStalledFor: 1m
+  # лаба 4
+  slaLatencySeconds: "0.25"   # граница бакета гистограммы
+  slaRatio: 0.95
+  slaFor: 2m
+  unschedulableFor: 2m
+  memoryPressureFor: 1m
+  workloadNodes: "k3s-w1|k3s-w2"
