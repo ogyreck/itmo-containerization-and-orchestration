@@ -14,5 +14,7 @@
 
 [Лабораторная 3 - Control Plane](lab3-k8s-control-plane/README.md)
 
+[Лабораторная 4 - Ресурсы](lab4-sheduling-resources/README.md)
+
 ### Задания по лабораторным работам
 Все задания по лабораторным работам пердствленны в репозитории: [https://github.com/KeladKaal/containerization-and-orchestration](https://github.com/KeladKaal/containerization-and-orchestration)
