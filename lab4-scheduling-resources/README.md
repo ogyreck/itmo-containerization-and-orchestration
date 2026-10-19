@@ -67,7 +67,7 @@ krr simple -n lab3 -p http://k3s-mon.lan:32001 --history_duration 1 --points_req
 
 ### postgres
 
-`postgres` в отчёт не попал. Под `shop-pg-1` принадлежит `Cluster` от CNPG , а krr ищет нагрузку только среди стандартных объектов . Поэтому посчитаем по тому же алгоритму вручную в Prometheus:
+`postgres` в отчет не попал. Под `shop-pg-1` не стандартному ресурсу , а krr ищет нагрузку только среди стандартных объектов . Поэтому посчитаем по тому же алгоритму вручную в Prometheus(тут запрос помогла сделать ии):
 
 ```promql
 # CPU request: p95 от rate за последний час
@@ -78,7 +78,7 @@ quantile_over_time(0.95,
 max_over_time(container_memory_working_set_bytes{namespace="lab3",pod="shop-pg-1",container="postgres"}[1h])
 ```
 
-Получилось: CPU p95 около 130m, working set max около 220Mi, то есть с буфером ≈ 253Mi. основную часть working set у postgres составляют страницы page cache и `shared_buffers`, а не память процессов. Значит, эта цифра растет вместе с объемом данных, а не с RPS.
+Получилось: CPU p95 около 130m, working set max около 220Mi, то есть с буфером = 253Mi. основную часть working set у postgres составляют страницы page cache и `shared_buffers`, а не память процессов. Значит, эта цифра растет вместе с объемом данных, а не с RPS.
 
 ![postgres в Prometheus](img/i6.png)
 
@@ -86,18 +86,18 @@ max_over_time(container_memory_working_set_bytes{namespace="lab3",pod="shop-pg-1
 
 | Сервис | Ресурс | Исходная оценка (request / limit) | Рекомендация | Разница |
 |---|---|---|---|---|
-| `api` | CPU | 100m / 200m | 36m / — | завышено ≈ ×3 |
-| `api` | Memory | 64Mi / 128Mi | 22Mi / 22Mi | завышено ≈ ×3 |
+| `api` | CPU | 100m / 200m | 36m / — | завышено примерно ×3 |
+| `api` | Memory | 64Mi / 128Mi | 22Mi / 22Mi | завышено примерно ×3 |
 | `worker` | CPU | 100m / 200m | 1m / — | завышено ×100 |
 | `worker` | Memory | 64Mi / 128Mi | 18Mi / 18Mi | завышено ≈ ×3.5 |
-| `postgres` | CPU | 100m / — | 130m / — | **занижено** ≈ ×1.3 |
+| `postgres` | CPU | 100m / — | 130m / — | **занижено** примерно ×1.3 |
 | `postgres` | Memory | 256Mi / 512Mi | 253Mi / 253Mi | request почти совпал |
 | `batch` | CPU | 250m / 500m | 501m / — | данные обрезаны лимитом |
 
 Откуда разрыв:
 
-- **Оценка была одинаковой для всех сервисов**, а профили потребления у них разные. `api` и `worker` на Go держат 10–20Mi, а 64/128Mi — просто "круглые» числа с запасом.
-- **`postgres` — единственный, кто недооценён по CPU.** Именно на него ложится каждый `POST /order`. А по памяти у него в working set сидит page cache, поэтому «на глаз» угадать его заранее нельзя.
+- **Оценка была одинаковой для всех сервисов**, а профили потребления у них разные. `api` и `worker` на Go держат 10–20Mi, а 64/128Mi — просто "круглые" числа с запасом.
+- **`postgres` — единственный, кто недооценён по CPU.** Именно на него ложится каждый `POST /order`. А по памяти у него в working set сидит page cache, поэтому "на глаз" угадать его заранее нельзя.
 
 
 ### Что ставим в values.yaml
@@ -109,7 +109,7 @@ max_over_time(container_memory_working_set_bytes{namespace="lab3",pod="shop-pg-1
 | `postgres` | 150m / — | 256Mi / 512Mi |
 
 - **Память `api` и `worker` - *2 от рекомендации.** krr считал максимум за час на одном профиле нагрузки. Go может раздуть кучу вдвое между сборками мусора, а `GET /orders` растёт вместе с таблицей. С 22Mi под упадёт в OOMKilled, как только память выйдет на 15% выше уже виденного пика. Часовое окно не увидело ни холодный старт, ни рост данных, ни нагрузку выше 400 RPS.
-- **Почему для CPU перцентиль, а для памяти максимум.** Если CPU не хватает, сервис просто замедляется. Если не хватает памяти, его убивают. Поэтому память считаем по максимуму. Если поменять местами, по памяти получим OOMKilled как раз на пиках, а по CPU будем держать ядра под редкие всплески, и они почти всё время будут простаивать.
+- **Почему для CPU перцентиль, а для памяти максимум.** Если CPU не хватает, сервис просто замедляется. Если не хватает памяти, его убивают( из лекции). Поэтому память считаем по максимуму. Если поменять местами, по памяти получим OOMKilled как раз на пиках, а по CPU будем держать ядра под редкие всплески, и они почти всё время будут простаивать.
 - **CPU limit для Guaranteed.** krr limit не даёт, а брать его от p95 нельзя: ядро режет CPU кусками по 100 ms, и на каждом всплеске сервис будет троттлиться. Берём максимум за час с запасом ×1.5–2 и ставим request равным limit.
 
 - **`postgres`.** CPU 150m — это p95 130m с запасом. Limit не ставим, чтобы не тормозить базу на критическом пути. Память: request 256Mi по замеру. Limit оставляем 512Mi: самому процессу нужно всего 68Mi, остальное — page cache, который ядро освободит само, и `shared_buffers`, которые освободить нельзя, так что их limit должен покрывать.
@@ -142,7 +142,7 @@ max_over_time(container_memory_working_set_bytes{namespace="lab3",pod="shop-pg-1
 ## Часть 5 - приоритеты и гарантии
 Сейчас все поды Burstable с priority 0, и под давлением ресурсов кластер не отличает `api` от `batch`. Добавим в чарт три вещи: классы приоритета, QoS через requests/limits и PDB.
 
-**Классы приоритета** ([`priorityclasses.yaml`](./helm/templates/priorityclasses.yaml)), задаются в `values.yaml` → `priorityClasses`:
+**Классы приоритета** ([`priorityclasses.yaml`](./helm/templates/priorityclasses.yaml)), задаются в `values.yaml`:
 
 | Класс | Значение | preemptionPolicy | Кому |
 |---|---|---|---|
@@ -150,7 +150,7 @@ max_over_time(container_memory_working_set_bytes{namespace="lab3",pod="shop-pg-1
 | `shop-normal` | 10000 | PreemptLowerPriority | `worker` |
 | `shop-sacrificial` | -1000 | Never | `batch` |
 
-`PriorityClass` - объект уровня кластера, поэтому к имени добавлен префикс релиза. `globalDefault: false`: поды без класса не должны молча становиться приоритетными. `batch` с `preemptionPolicy: Never` сам никого не вытесняет, а только ждёт свободного места. Значение у него отрицательное, и это сознательно. Сначала был класс `shop-low` со значением 1000, но у всех подов без класса (Kyverno, node-exporter, оператор CNPG) приоритет 0, и жертвуемая нагрузка оказалась **выше** системных компонентов. К чему это привело, видно в части 6. Поле `value` у PriorityClass неизменяемое: число записывается в `pod.spec.priority` при создании пода. Поэтому завели новый класс, а не правили старый.
+
 
 **QoS:**
 
@@ -161,22 +161,22 @@ max_over_time(container_memory_working_set_bytes{namespace="lab3",pod="shop-pg-1
 | `worker` | 50m / 40Mi | 50m / 40Mi | Guaranteed |
 | `batch` | 20m / 64Mi | 64m / 118Mi | Burstable |
 
-Guaranteed требует requests = limits по CPU и памяти у **каждого** контейнера пода, включая init. Под postgres CNPG копирует `resources` из `Cluster` в init-контейнер `bootstrap-controller`, так что настраивать его отдельно не нужно. Из-за Guaranteed у postgres появился CPU limit (в части 3 мы его не ставили): без него Guaranteed не бывает. Значение взято с запасом над p95 (130m), чтобы база не упиралась в квоту.
+Guaranteed требует requests = limits по CPU и памяти у **каждого** контейнера пода, включая init. 
 
-**PDB.** Для `api` - [`api-pdb.yaml`](./helm/templates/api-pdb.yaml) с `maxUnavailable: 1`: при drain за раз уходит не больше одной реплики из четырёх. Для postgres свой PDB не делаем: CNPG уже создаёт `shop-pg-primary`. Два PDB на один под ломают Eviction API, и `kubectl drain` на таком поде зависает.
+**PDB.** Для `api` - [`api-pdb.yaml`](./helm/templates/api-pdb.yaml) с `maxUnavailable: 1`: при  выселении за раз уходит не больше одной реплики из четырёх. Для postgres свой PDB не делаем: CNPG уже создаёт `shop-pg-primary`. 
 
 ### Что это даёт под давлением
 
-- **Приоритет работает в планировщике.** Если высокоприоритетному поду не хватает места, планировщик вытесняет (preemption) поды с более низким приоритетом.
-- **PDB защищает только от «добровольных» выселений** через Eviction API (`kubectl drain`). При preemption планировщик лишь старается его не нарушать. При node-pressure eviction kubelet на PDB не смотрит совсем.
+- **Приоритет работает в планировщике.** Если высокоприоритетному поду не хватает места, планировщик вытесняет поды с более низким приоритетом.
+- **PDB защищает только от "добровольных" выселений** через Eviction API (`kubectl drain`). При preemption планировщик лишь старается его не нарушать. 
 - **QoS работает на ноде** и влияет на то, кого выселят или убьют первым, когда память кончается.
 
 ### Burstable и Guaranteed в порядке выселения
 
 Здесь два разных механизма:
 
-1. **kubelet (node-pressure eviction).** Срабатывает при пересечении порога, например `memory.available`. Kubelet сортирует поды по трём признакам: превышает ли потребление requests, затем по priority, затем по тому, насколько сильно превышает. Guaranteed по определению не может превысить requests, ведь limit = request. Поэтому Burstable `batch`, который вылез за свои 64Mi, да ещё с низким приоритетом, уходит первым.
-2. **Ядро (OOM killer).** Срабатывает, если kubelet не успел. Жертву ядро выбирает по `oom_score_adj`, который kubelet выставляет по QoS: Guaranteed `-997` (почти неубиваем), Burstable от 2 до 999 (чем меньше request относительно памяти ноды, тем выше).
+1. **kubelet ** Срабатывает при пересечении порога. Kubelet сортирует поды по трём признакам: превышает ли потребление requests, затем по priority, затем по тому, насколько сильно превышает. Guaranteed по определению не может превысить requests, ведь limit = request. Поэтому Burstable `batch`, который вылез за свои 64Mi уходит первым.
+2. **Ядро (OOM killer).** Срабатывает, если kubelet не успел. Жертву ядро выбирает по `oom_score_adj` (счетчик оом,  пишет само ядро), который kubelet выставляет по QoS: Guaranteed `-997` (почти неубиваем), Burstable от 2 до 999.
 
 ### Результат
 
@@ -188,8 +188,6 @@ Guaranteed требует requests = limits по CPU и памяти у **каж
 ## Часть 6 - Нехватка ресурсов и preemption
 
 Чтобы показать, что планировщик считает по requests, а не по факту, на время этой части сделаем у `batch` большой резерв и маленькое реальное потребление: `requests.memory: 256Mi` при `load.memoryMB: 16`. QoS остаётся Burstable (limit 512Mi).
-
-Перед этим на воркерах включили порог `memory.available<300Mi` и `system-reserved=memory=256Mi` (через [Ansible](../generic/ansible/inventory/k3s/inventory.yml)). k3s задаёт свой `eviction-hard` только по диску, и дефолтный порог по памяти пропадает. После этого allocatable воркера уменьшился с ~2.4Gi до ~1.9Gi: планировщик видит меньше памяти, чем есть на ноде.
 
 ### Pending
 
@@ -219,7 +217,7 @@ preemption: not eligible due to preemptionPolicy=Never.
 ![ноды: requests и реальное потребление](img/i14.png)
 ![ноды после роста api](img/i14.1.png)
 
-Планировщик не смотрит на реальное потребление: он складывает requests уже размещённых подов и сравнивает с allocatable. Под с request 256Mi «не влезает», хотя по факту на ноде свободно почти 1Gi. Это и есть цена завышенных requests: место зарезервировано, но не используется.
+Планировщик не смотрит на реальное потребление: он складывает requests уже размещённых подов и сравнивает с allocatable. Под с request 256Mi "не влезает", хотя по факту на ноде свободно почти 1Gi. 
 
 ### Preemption
 
@@ -235,7 +233,7 @@ preemption: not eligible due to preemptionPolicy=Never.
 2. Webhook Kyverno настроен с `failurePolicy: Fail`. Без живого контроллера apiserver отклоняет любое создание и изменение Deployment и подов.
 3. Обратный `helm upgrade` тоже падает: `failed calling webhook "nvpol.validate.kyverno.svc-fail" … no endpoints available for service "kyverno-svc"`.
 
-Выбрались через `kubectl scale`: webhook проверяет `deployments` и `pods`, но не подресурс `deployments/scale`. Уменьшили `batch` до 0 и `api` до 4. `batch` пришлось убрать тоже: его Pending-поды (1000) стоят в очереди планировщика раньше Kyverno (0) и заняли бы освободившееся место первыми.
+Выбрались через `kubectl scale`: webhook проверяет `deployments` и `pods`, но не подресурс `deployments/scale`. Уменьшили `batch` до 0 и `api` до 4. `batch` пришлось убрать тоже: его Pending-поды (1000) стоят в очереди планировщика раньше Kyverno (0) и заняли бы освободившееся место первыми. 
 
 Вывод: приоритеты действуют на весь кластер, а не на один namespace. Всё, без чего не работает admission, должно стоять выше любого приложения:
 
@@ -284,7 +282,7 @@ batch:
     limits:   { memory: 2Gi }
 ```
 
-Когда `batch` дорос до ~1.6Gi, свободной памяти на `k3s-w1` осталось меньше порога. Нода получила `MemoryPressure=True` и taint `node.kubernetes.io/memory-pressure`:
+Когда `batch` дорос до 1.6Gi, свободной памяти на `k3s-w1` осталось меньше порога. Нода получила `MemoryPressure=True` и taint `node.kubernetes.io/memory-pressure`:
 
 ![MemoryPressure на k3s-w1](img/i17.png)
 
@@ -308,24 +306,12 @@ Container shop-batch was using 1694168Ki, request is 256Mi, has larger consumpti
 2. Среди них выбирает с наименьшим **priority**. У `batch` -1000, ниже всех на ноде, включая node-exporter и оператор CNPG (0, BestEffort). С прежним значением 1000 первыми выселили бы их.
 3. Затем смотрит, **насколько** превышен request. У `batch` разница самая большая.
 
-Deployment сразу создал новый `batch`. Он снова встал на `k3s-w1` (на скрине i17 он Running 19 с) — по всей видимости, успел до того, как появился taint. Kubelet не отклоняет Burstable-поды при MemoryPressure, отказ при пуске получают только BestEffort. Поэтому дальше цикл «вырос → выселен» повторяется, пока `memoryMB` не вернули к 16.
+Deployment сразу создал новый `batch`. Он снова встал на `k3s-w1` — по всей видимости, успел до того, как появился taint. Kubelet не отклоняет Burstable-поды при MemoryPressure, отказ при пуске получают только BestEffort. 
 
-### Eviction и OOMKilled — один симптом, два диагноза
-
-В обоих случаях под «умер из-за памяти», но причины и механизмы разные:
-
-| | Node-pressure eviction | OOMKilled по своему лимиту |
-|---|---|---|
-| Кто убивает | kubelet | ядро (OOM killer внутри cgroup контейнера) |
-| Когда | на **ноде** кончается память (`memory.available` < порога) | **контейнер** упёрся в свой `limits.memory` |
-| Кого | выбирает kubelet: превысил ли requests, затем priority, затем насколько превысил | только этот контейнер, соседи не при чём |
-| Что с подом | под `Failed`, `reason: Evicted`, контроллер создаёт новый | под жив, контейнер перезапускается, `lastState.terminated.reason: OOMKilled`, растёт `restartCount` |
-| Состояние ноды | `MemoryPressure=True`, taint `node.kubernetes.io/memory-pressure:NoSchedule` | нода в порядке, `MemoryPressure=False` |
-| Что чинить | ёмкость ноды и requests соседей (overcommit) | лимит или потребление самого сервиса |
 
 ## Часть 8 - SLA под нагрузкой
 
-**SLA: 95% запросов `POST /order` быстрее 250 ms, доля 5xx меньше 1% — даже при нехватке ресурсов.**
+**SLA: 95% запросов `POST /order` быстрее 250 ms, доля 5xx меньше 1% - даже при нехватке ресурсов.**
 
 Граница 250 ms выбрана по бакету гистограммы `api_request_duration_seconds` (бакеты 0.1, 0.25, 0.5…). На границе бакета доля «быстрее 250 ms» считается точно, а значение между бакетами (например, 300 ms) `histogram_quantile` только интерполирует.
 
