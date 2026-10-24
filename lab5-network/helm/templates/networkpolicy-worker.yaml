@@ -1,0 +1,35 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-worker
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- toYaml .Values.networkPolicy.components.worker.podSelector | nindent 6 }}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Prometheus скрейпит /metrics по ServiceMonitor shop-worker
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.networkPolicy.components.prometheus.namespace }}
+      podSelector:
+        matchLabels:
+          {{- toYaml .Values.networkPolicy.components.prometheus.podSelector | nindent 10 }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.networkPolicy.components.worker.port }}
+  egress:
+  # Исходящий трафик от Воркера к базе данных PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- toYaml .Values.networkPolicy.components.postgres.podSelector | nindent 10 }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.networkPolicy.components.postgres.port }}
+{{- end }}

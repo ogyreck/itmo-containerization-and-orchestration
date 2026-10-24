@@ -22,8 +22,6 @@ k3s_workers:
   vars:
     k3s_node_labels:
       - "purpose=workload"
-    # k3s задаёт свой eviction-hard только по диску, и дефолт memory.available<100Mi
-    # теряется: без этого порога kubelet не видит MemoryPressure и всё решает OOM killer ядра.
     k3s_kubelet_args:
       - "eviction-hard=memory.available<300Mi,nodefs.available<5%,imagefs.available<5%"
       - "system-reserved=memory=256Mi"
@@ -38,3 +36,7 @@ all:
     k3s_version: "v1.36.4+k3s1"
     k3s_server_url: "https://k3s-cp.lan:6443"
     stand_k3s_token: "token-andron"
+    # Сеть подов отдаём внешнему CNI (Calico, лаба 5): встроенные flannel и
+    # kube-router netpol выключены, иначе политики применяли бы два движка сразу.
+    k3s_flannel_backend: "none"
+    k3s_disable_network_policy: true

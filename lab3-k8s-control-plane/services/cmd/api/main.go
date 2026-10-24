@@ -5,6 +5,10 @@
 //	GET  /orders  — список заказов, ?limit=N (по умолчанию 50)
 //	GET  /version — версия сборки и имя пода
 //	GET  /metrics — метрики Prometheus
+//
+// Служебный порт ADMIN_PORT (по умолчанию 8081, в Service не публикуется):
+//
+//	GET  /prestop?seconds=N — для preStop-хука kubelet: включает drain и держит ответ N секунд
 package main
 
 import (
@@ -16,6 +20,7 @@ import (
 	"net/http"
 	"os/signal"
 	"strconv"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -64,6 +69,38 @@ type order struct {
 type server struct {
 	db  *pgxpool.Pool
 	log *slog.Logger
+	// draining включается preStop-хуком: под уже выведен из EndpointSlice, но клиенты
+	// с keep-alive соединениями всё ещё ходят в него напрямую (conntrack помнит DNAT).
+	draining atomic.Bool
+}
+
+// closeWhenDraining в режиме drain отвечает с Connection: close — клиент закрывает соединение
+// сам, после полного ответа, и следующий запрос открывает заново через Service, уже на живой под.
+// Без этого keep-alive соединения закрывает srv.Shutdown по SIGTERM, и запрос, отправленный
+// в этот момент в простаивающее соединение, получает EOF.
+func (s *server) closeWhenDraining(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.draining.Load() {
+			w.Header().Set("Connection", "close")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// handlePreStop вызывается kubelet-ом как preStop httpGet: включает drain и держит ответ
+// seconds секунд — kubelet ждёт ответа, и только потом шлёт SIGTERM.
+func (s *server) handlePreStop(w http.ResponseWriter, r *http.Request) {
+	seconds, err := strconv.Atoi(r.URL.Query().Get("seconds"))
+	if err != nil || seconds < 0 || seconds > 60 {
+		seconds = 5
+	}
+	s.draining.Store(true)
+	s.log.Info("preStop: drain включён", "seconds", seconds)
+	select {
+	case <-time.After(time.Duration(seconds) * time.Second):
+	case <-r.Context().Done():
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 type statusWriter struct {
@@ -184,5 +221,15 @@ func main() {
 	mux.HandleFunc("POST /order", s.observe("/order", s.handleCreateOrder))
 	mux.HandleFunc("GET /orders", s.observe("/orders", s.handleListOrders))
 
-	common.Serve(ctx, mux, log)
+	admin := http.NewServeMux()
+	admin.HandleFunc("GET /prestop", s.handlePreStop)
+	adminSrv := &http.Server{Addr: ":" + common.Env("ADMIN_PORT", "8081"), Handler: admin, ReadHeaderTimeout: 5 * time.Second}
+	go func() {
+		if err := adminSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("admin-сервер упал", "err", err)
+		}
+	}()
+	defer adminSrv.Close()
+
+	common.Serve(ctx, s.closeWhenDraining(mux), log)
 }

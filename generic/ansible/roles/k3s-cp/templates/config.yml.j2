@@ -13,6 +13,10 @@ disable:
 {% endfor %}
 {% endif %}
 
+flannel-backend: "{{ k3s_flannel_backend }}"
+{% if k3s_disable_network_policy %}
+disable-network-policy: true
+{% endif %}
 
 {% if k3s_isolate_control_plane %}
 node-taint:

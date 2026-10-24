@@ -7,6 +7,8 @@ k3s_token: "{{ stand_k3s_token }}"
 
 k3s_local_kubeconfig: "{{ lookup('env', 'HOME') }}/.kube/k3s-lab.yaml"
 
+k3s_flannel_backend: "vxlan"
+
 k3s_node_labels: []
 k3s_node_taints: []
 k3s_kubelet_args: []

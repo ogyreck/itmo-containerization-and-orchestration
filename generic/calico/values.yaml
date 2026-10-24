@@ -1,0 +1,10 @@
+installation:
+  calicoNetwork:
+    bgp: Enabled
+    ipPools:
+      - name: default-ipv4-ippool
+        cidr: 10.42.0.0/16
+        encapsulation: VXLANCrossSubnet
+        blockSize: 26
+        natOutgoing: Enabled
+        nodeSelector: all()

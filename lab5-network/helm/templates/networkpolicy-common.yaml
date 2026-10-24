@@ -1,0 +1,27 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-dns-egress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector: {} # Применяем вообще ко всем подам в этом namespace
+  policyTypes:
+  - Egress
+  # Пробы и preStop от kubelet сюда не нужны: по спецификации NetworkPolicy трафик с ноды пода
+  # в сам под разрешён всегда (проверено: под default-deny поды остались Ready).
+  egress:
+  # Разрешаем всем подам ходить в CoreDNS для резолва имен
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.networkPolicy.components.dns.namespace }}
+      podSelector:
+        matchLabels:
+          {{- toYaml .Values.networkPolicy.components.dns.podSelector | nindent 10 }}
+    ports:
+    - protocol: UDP
+      port: {{ .Values.networkPolicy.components.dns.port }}
+    - protocol: TCP
+      port: {{ .Values.networkPolicy.components.dns.port }}
+{{- end }}

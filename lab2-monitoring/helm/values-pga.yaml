@@ -2,7 +2,7 @@ prometheus:
   prometheusSpec:
     nodeSelector: 
       purpose: monitoring
-
+    enableRemoteWriteReceiver: true
     tolerations:
       - key: "purpose"
         operator: "Equal"

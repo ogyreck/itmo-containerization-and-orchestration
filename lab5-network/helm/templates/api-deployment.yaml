@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: shop-api
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    lab: lab5
+spec:
+  replicas: {{ .Values.api.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector: 
+    matchLabels:
+      app.kubernetes.io/name: shop-api
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: shop-api
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        lab: lab5
+    spec:
+      nodeSelector:
+        purpose: workload
+      topologySpreadConstraints:
+        - maxSkew: {{ .Values.api.spread.maxSkew }}
+          topologyKey: {{ .Values.api.spread.topologyKey }}
+          whenUnsatisfiable: {{ .Values.api.spread.whenUnsatisfiable }}
+          nodeTaintsPolicy: {{ .Values.api.spread.nodeTaintsPolicy }}
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: shop-api
+              app.kubernetes.io/instance: {{ .Release.Name }}
+          matchLabelKeys:
+            - pod-template-hash
+      terminationGracePeriodSeconds: {{ .Values.api.terminationGracePeriodSeconds | default 30 }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      containers:
+        - name: shop-api
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.port }}
+            # Служебный порт для preStop-хука, в Service не публикуется
+            - name: admin
+              containerPort: {{ .Values.api.adminPort | default 8081 }}
+          env:
+            - name: HEALTH_FAIL
+              value: {{ .Values.api.healthFail | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-pg-app
+                  key: uri
+          securityContext:
+            allowPrivilegeEscalation: false
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          {{- with .Values.api.preStopSleepSeconds }}
+          # preStop через служебный порт api: под включает drain (Connection: close на всех ответах,
+          # keep-alive клиенты переподключаются через Service) и держит ответ N секунд — kubelet ждёт,
+          # пока kube-proxy на всех нодах уберёт IP пода из правил, и только потом шлёт SIGTERM.
+          lifecycle:
+            preStop:
+              httpGet:
+                path: /prestop?seconds={{ . }}
+                port: admin
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+      priorityClassName: {{ .Release.Name }}-{{ .Values.api.priorityClass }}  

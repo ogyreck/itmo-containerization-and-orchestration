@@ -1,0 +1,6 @@
+apiVersion: v2
+name: shop
+description: shop — api, worker и postgres для лабы 5 (сети, zero trust)
+type: application
+version: 0.6.0
+appVersion: "0.1.0"

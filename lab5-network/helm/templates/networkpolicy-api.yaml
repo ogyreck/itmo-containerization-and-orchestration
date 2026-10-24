@@ -1,0 +1,44 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-api
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- toYaml .Values.networkPolicy.components.api.podSelector | nindent 6 }}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 1. Клиенты через NodePort: после SNAT источник — IP ноды
+  - from:
+    {{- range .Values.networkPolicy.infrastructure.nodeCIDRs }}
+    - ipBlock:
+        cidr: {{ . | quote }}
+    {{- end }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.networkPolicy.components.api.port }}
+  # 2. Входящий трафик от Prometheus для сбора метрик
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.networkPolicy.components.prometheus.namespace }}
+      podSelector:
+        matchLabels:
+          {{- toYaml .Values.networkPolicy.components.prometheus.podSelector | nindent 10 }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.networkPolicy.components.api.port }}
+  egress:
+  # 1. Исходящий трафик от API к базе данных PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          {{- toYaml .Values.networkPolicy.components.postgres.podSelector | nindent 10 }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.networkPolicy.components.postgres.port }}
+{{- end }}

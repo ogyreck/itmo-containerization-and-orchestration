@@ -1,0 +1,141 @@
+priorityClasses:
+  high:
+    value: 100000
+    description: "Критический путь"
+  normal:
+    value: 10000
+    description: "Фоновые сервисы"
+
+networkPolicy:
+  enabled: true
+
+  components:
+    api:
+      podSelector:
+        app.kubernetes.io/name: shop-api
+      port: 8080            # http: трафик клиентов, /health и /metrics
+    worker:
+      podSelector:
+        app.kubernetes.io/name: shop-worker
+      port: 8080            # http: /health и /metrics
+    postgres:
+      podSelector:
+        app.kubernetes.io/name: shop-postgres
+      port: 5432
+      # Порт instance manager CNPG: по нему оператор опрашивает статус инстанса
+      operatorPorts: [8000]
+    dns:
+      namespace: kube-system
+      podSelector:
+        k8s-app: kube-dns
+      port: 53
+    prometheus:
+      namespace: monitoring
+      podSelector:
+        app.kubernetes.io/name: prometheus
+    cnpgOperator:
+      namespace: cnpg-system
+      podSelector:
+        app.kubernetes.io/name: cloudnative-pg
+        
+  # Сетевые параметры инфраструктуры стенда
+  infrastructure:
+    # Куда на самом деле уходит запрос к сервису kubernetes (10.43.0.1:443) после DNAT kube-proxy
+    apiServer:
+      cidr: "192.168.1.20/32"
+      port: 6443
+    # IP нод. Клиент через NodePort приходит в под api с IP той ноды, в которую стрелял
+    # (SNAT kube-proxy при externalTrafficPolicy: Cluster), а NodePort открыт на каждой ноде.
+    # Новая нода — новая строка.
+    nodeCIDRs:
+      - "192.168.1.20/32"   # k3s-cp
+      - "192.168.1.21/32"   # k3s-mon
+      - "192.168.1.22/32"   # k3s-w1
+      - "192.168.1.23/32"   # k3s-w2
+
+api:
+  priorityClass: high
+  pdb:
+    enabled: true
+    maxUnavailable: 1
+  replicaCount: 3
+  spread:
+    topologyKey: kubernetes.io/hostname
+    maxSkew: 1
+    whenUnsatisfiable: DoNotSchedule  
+    nodeTaintsPolicy: Honor           
+  image:
+    repository: ghcr.io/ogyreck/shop-api
+    tag: "0.3.0"   # 0.3.0: drain через preStop httpGet на :8081/prestop
+    pullPolicy: IfNotPresent
+  port: 8080
+  healthFail: false
+  preStopSleepSeconds: 5
+  adminPort: 8081
+  service:
+    port: 80
+    nodePort: 32040
+  resources:
+    requests:
+      cpu: 100m
+      memory: 48Mi
+    limits:
+      cpu: 100m
+      memory: 48Mi
+
+worker:
+  priorityClass: normal
+  replicaCount: 2
+  image:
+    repository: ghcr.io/ogyreck/shop-worker
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  port: 8080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 40Mi
+    limits:
+      cpu: 50m
+      memory: 40Mi
+
+postgres:
+  priorityClass: high
+  enabled: true
+  instances: 1                     
+  image:
+    repository: ghcr.io/ogyreck/postgresql
+    tag: "18.4-system-trixie"
+  storage:
+    size: 1Gi
+    storageClass: ""               
+  database: shop
+  owner: shop
+  resources:
+    requests:
+      cpu: 300m
+      memory: 512Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+alerts:
+  errorRatio: 0.05            
+  errorRatioFor: 2m
+  latencyP95Seconds: 0.5
+  latencyFor: 5m
+  workerStalledSeconds: 60    
+  workerStalledFor: 1m
+  # лаба 4
+  slaLatencySeconds: "0.25"  
+  slaRatio: 0.95
+  slaFor: 2m
+  unschedulableFor: 2m
+  memoryPressureFor: 1m
+  workloadNodes: "k3s-w1|k3s-w2"
+  # лаба 5: сеть
+  dbUnreachableFor: 1m          # ошибки пути к БД: в норме их нет вовсе, порог > 0
+  dnsServfailRatio: 0.05        # доля SERVFAIL в ответах CoreDNS
+  dnsServfailFor: 5m
+  conntrackRatio: 0.8           # заполнение таблицы conntrack на ноде
+  conntrackFor: 5m

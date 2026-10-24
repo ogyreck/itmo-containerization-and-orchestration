@@ -36,10 +36,12 @@
     enabled: true
     state: started
 
-- name: "Дождаться, пока нода станет Ready"
+# С внешним CNI нода до установки CNI NotReady — ждём только регистрации
+- name: "Дождаться ноды (Ready, либо регистрация, если CNI внешний)"
   ansible.builtin.command: >
     /usr/local/bin/kubectl --kubeconfig {{ k3s_local_kubeconfig }}
-    wait --for=condition=Ready node/{{ inventory_hostname }} --timeout=180s
+    wait node/{{ inventory_hostname }} --timeout=180s
+    {{ '--for=create' if k3s_flannel_backend == 'none' else '--for=condition=Ready' }}
   delegate_to: localhost
   become: false
   changed_when: false

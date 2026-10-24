@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: shop-worker
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    lab: lab5
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shop-worker
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

@@ -42,8 +42,12 @@
     state: present
     timeout: 200
 
-- name: "Ожидание готовности ноды (статус Ready)"
-  ansible.builtin.command: /usr/local/bin/kubectl wait --for=condition=Ready node --all --timeout=180s
+# Без встроенного CNI нода остаётся NotReady (NetworkPluginNotReady), пока не
+# поставлен CNI, — тогда ждём только регистрации ноды в API.
+- name: "Ожидание ноды (Ready, либо регистрация, если CNI внешний)"
+  ansible.builtin.command: >
+    /usr/local/bin/kubectl wait node/{{ inventory_hostname }} --timeout=180s
+    {{ '--for=create' if k3s_flannel_backend == 'none' else '--for=condition=Ready' }}
   changed_when: false
 
 #Это моя гордость, автоматом проложить конфиг от кубера на ноут

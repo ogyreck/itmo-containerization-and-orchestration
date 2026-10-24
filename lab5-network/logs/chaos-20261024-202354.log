@@ -1,0 +1,70 @@
+2026-10-24T20:23:54+03:00 старт: ns=lab5 interval=7s
+2026-10-24T20:23:55+03:00 deleted shop-worker-c59f97b7b-5tmdh node=k3s-w1 ip=10.42.2.188 (ready worker было 2)
+2026-10-24T20:24:02+03:00 evicted shop-api-658dbb6d8d-flbpk node=k3s-w1 ip=10.42.2.190
+2026-10-24T20:24:10+03:00 deleted shop-worker-c59f97b7b-vmg6s node=k3s-w2 ip=10.42.209.96 (ready worker было 2)
+2026-10-24T20:24:17+03:00 evicted shop-api-658dbb6d8d-5lqtd node=k3s-w1 ip=10.42.2.191
+2026-10-24T20:24:24+03:00 deleted shop-worker-c59f97b7b-j7pw4 node=k3s-w2 ip=10.42.209.100 (ready worker было 2)
+2026-10-24T20:24:31+03:00 evicted shop-api-658dbb6d8d-cwfnt node=k3s-w1 ip=10.42.2.131
+2026-10-24T20:24:39+03:00 skip shop-api-658dbb6d8d-bdhdd: PDB не разрешает (429)
+2026-10-24T20:24:46+03:00 evicted shop-api-658dbb6d8d-lsdhc node=k3s-w2 ip=10.42.209.99
+2026-10-24T20:24:53+03:00 deleted shop-worker-c59f97b7b-z96gj node=k3s-w2 ip=10.42.209.101 (ready worker было 2)
+2026-10-24T20:25:01+03:00 evicted shop-api-658dbb6d8d-bdhdd node=k3s-w1 ip=10.42.2.130
+2026-10-24T20:25:08+03:00 deleted shop-worker-c59f97b7b-lj2x8 node=k3s-w2 ip=10.42.209.103 (ready worker было 2)
+2026-10-24T20:25:15+03:00 evicted shop-api-658dbb6d8d-c9jw2 node=k3s-w2 ip=10.42.209.102
+2026-10-24T20:25:23+03:00 deleted shop-worker-c59f97b7b-9qdbv node=k3s-w2 ip=10.42.209.104 (ready worker было 2)
+2026-10-24T20:25:30+03:00 evicted shop-api-658dbb6d8d-gjggw node=k3s-w1 ip=10.42.2.140
+2026-10-24T20:25:37+03:00 evicted shop-api-658dbb6d8d-cjzth node=k3s-w1 ip=10.42.2.141
+2026-10-24T20:25:44+03:00 skip shop-api-658dbb6d8d-xpdv6: PDB не разрешает (429)
+2026-10-24T20:25:52+03:00 evicted shop-api-658dbb6d8d-569jr node=k3s-w2 ip=10.42.209.105
+2026-10-24T20:25:59+03:00 deleted shop-worker-c59f97b7b-p6mkp node=k3s-w2 ip=10.42.209.106 (ready worker было 2)
+2026-10-24T20:26:06+03:00 skip shop-worker-c59f97b7b-6shv2: ready worker=1 < 2
+2026-10-24T20:26:14+03:00 evicted shop-api-658dbb6d8d-nfk9m node=k3s-w1 ip=10.42.2.142
+2026-10-24T20:26:21+03:00 evicted shop-api-658dbb6d8d-s8569 node=k3s-w2 ip=10.42.209.107
+2026-10-24T20:26:28+03:00 deleted shop-worker-c59f97b7b-6shv2 node=k3s-w1 ip=10.42.2.134 (ready worker было 2)
+2026-10-24T20:26:36+03:00 evicted shop-api-658dbb6d8d-xpdv6 node=k3s-w1 ip=10.42.2.139
+2026-10-24T20:26:43+03:00 evicted shop-api-658dbb6d8d-928pr node=k3s-w1 ip=10.42.2.138
+2026-10-24T20:26:50+03:00 evicted shop-api-658dbb6d8d-pvwvd node=k3s-w2 ip=10.42.209.109
+2026-10-24T20:26:57+03:00 evicted shop-api-658dbb6d8d-vml5z node=k3s-w2 ip=10.42.209.110
+2026-10-24T20:27:05+03:00 evicted shop-api-658dbb6d8d-qx6pd node=k3s-w2 ip=10.42.209.111
+2026-10-24T20:27:12+03:00 deleted shop-worker-c59f97b7b-rbz84 node=k3s-w1 ip=10.42.2.136 (ready worker было 2)
+2026-10-24T20:27:19+03:00 skip shop-worker-c59f97b7b-7m2jw: ready worker=1 < 2
+2026-10-24T20:27:27+03:00 deleted shop-worker-c59f97b7b-lnjkg node=k3s-w2 ip=10.42.209.108 (ready worker было 2)
+2026-10-24T20:27:34+03:00 deleted shop-worker-c59f97b7b-7m2jw node=k3s-w1 ip=10.42.2.144 (ready worker было 2)
+2026-10-24T20:27:41+03:00 evicted shop-api-658dbb6d8d-8mwt8 node=k3s-w1 ip=10.42.2.143
+2026-10-24T20:27:49+03:00 evicted shop-api-658dbb6d8d-4x8hl node=k3s-w1 ip=10.42.2.137
+2026-10-24T20:27:56+03:00 skip shop-api-658dbb6d8d-mzlxv: PDB не разрешает (429)
+2026-10-24T20:28:03+03:00 deleted shop-worker-c59f97b7b-p2m7l node=k3s-w1 ip=10.42.2.147 (ready worker было 2)
+2026-10-24T20:28:11+03:00 evicted shop-api-658dbb6d8d-mzlxv node=k3s-w2 ip=10.42.209.112
+2026-10-24T20:28:18+03:00 deleted shop-worker-c59f97b7b-8cv9z node=k3s-w1 ip=10.42.2.149 (ready worker было 2)
+2026-10-24T20:28:25+03:00 deleted shop-worker-c59f97b7b-qvl5b node=k3s-w2 ip=10.42.209.113 (ready worker было 2)
+2026-10-24T20:28:33+03:00 evicted shop-api-658dbb6d8d-9jvgw node=k3s-w1 ip=10.42.2.146
+2026-10-24T20:28:40+03:00 skip shop-api-658dbb6d8d-vhcwm: PDB не разрешает (429)
+2026-10-24T20:28:47+03:00 deleted shop-worker-c59f97b7b-979fp node=k3s-w2 ip=10.42.209.115 (ready worker было 2)
+2026-10-24T20:28:55+03:00 skip shop-worker-c59f97b7b-vvhcr: ready worker=1 < 2
+2026-10-24T20:29:02+03:00 evicted shop-api-658dbb6d8d-vhcwm node=k3s-w1 ip=10.42.2.145
+2026-10-24T20:29:09+03:00 evicted shop-api-658dbb6d8d-rqfjv node=k3s-w1 ip=10.42.2.153
+2026-10-24T20:29:16+03:00 skip shop-api-658dbb6d8d-6mxgm: PDB не разрешает (429)
+2026-10-24T20:29:24+03:00 evicted shop-api-658dbb6d8d-6mxgm node=k3s-w1 ip=10.42.2.150
+2026-10-24T20:29:31+03:00 evicted shop-api-658dbb6d8d-vmxrz node=k3s-w1 ip=10.42.2.155
+2026-10-24T20:29:38+03:00 deleted shop-worker-c59f97b7b-sksqw node=k3s-w2 ip=10.42.209.116 (ready worker было 2)
+2026-10-24T20:29:45+03:00 evicted shop-api-658dbb6d8d-xdf6m node=k3s-w1 ip=10.42.2.152
+2026-10-24T20:29:53+03:00 deleted shop-worker-c59f97b7b-wxvc2 node=k3s-w2 ip=10.42.209.117 (ready worker было 2)
+2026-10-24T20:30:00+03:00 skip shop-worker-c59f97b7b-xtw4f: ready worker=1 < 2
+2026-10-24T20:30:07+03:00 deleted shop-worker-c59f97b7b-vvhcr node=k3s-w1 ip=10.42.2.148 (ready worker было 2)
+2026-10-24T20:30:15+03:00 evicted shop-api-658dbb6d8d-cbmgl node=k3s-w1 ip=10.42.2.157
+2026-10-24T20:30:22+03:00 skip shop-api-658dbb6d8d-6lbmj: PDB не разрешает (429)
+2026-10-24T20:30:29+03:00 deleted shop-worker-c59f97b7b-xtw4f node=k3s-w2 ip=10.42.209.118 (ready worker было 2)
+2026-10-24T20:30:37+03:00 skip shop-worker-c59f97b7b-c85sl: ready worker=1 < 2
+2026-10-24T20:30:44+03:00 evicted shop-api-658dbb6d8d-gk779 node=k3s-w1 ip=10.42.2.159
+2026-10-24T20:30:51+03:00 evicted shop-api-658dbb6d8d-6lbmj node=k3s-w1 ip=10.42.2.156
+2026-10-24T20:30:59+03:00 deleted shop-worker-c59f97b7b-c85sl node=k3s-w1 ip=10.42.2.151 (ready worker было 2)
+2026-10-24T20:31:06+03:00 evicted shop-api-658dbb6d8d-xnbgv node=k3s-w2 ip=10.42.209.114
+2026-10-24T20:31:13+03:00 evicted shop-api-658dbb6d8d-7hg78 node=k3s-w2 ip=10.42.209.120
+2026-10-24T20:31:20+03:00 skip shop-api-658dbb6d8d-czbzr: PDB не разрешает (429)
+2026-10-24T20:31:28+03:00 evicted shop-api-658dbb6d8d-tznt2 node=k3s-w2 ip=10.42.209.121
+2026-10-24T20:31:35+03:00 evicted shop-api-658dbb6d8d-xstr9 node=k3s-w2 ip=10.42.209.122
+2026-10-24T20:31:42+03:00 evicted shop-api-658dbb6d8d-xhx4x node=k3s-w2 ip=10.42.209.123
+2026-10-24T20:31:50+03:00 skip shop-api-658dbb6d8d-qhbjg: PDB не разрешает (429)
+2026-10-24T20:31:57+03:00 evicted shop-api-658dbb6d8d-czbzr node=k3s-w1 ip=10.42.2.154
+2026-10-24T20:32:04+03:00 deleted shop-worker-c59f97b7b-6s64d node=k3s-w1 ip=10.42.2.162 (ready worker было 2)
+2026-10-24T20:32:10+03:00 остановлено
