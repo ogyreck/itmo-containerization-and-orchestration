@@ -1,0 +1,5 @@
+# Порт Service (80) вместо порта пода (8080) в ingress к api
+networkPolicy:
+  components:
+    api:
+      port: 80

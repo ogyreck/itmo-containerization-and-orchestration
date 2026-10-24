@@ -1,0 +1,6 @@
+# Неверная метка в allow-правиле DNS: политика dns-egress не находит CoreDNS
+networkPolicy:
+  components:
+    dns:
+      podSelector:
+        k8s-app: dns-kube

@@ -1,0 +1,5 @@
+# Порт Postgres в правилах не совпадает с реальным 5432
+networkPolicy:
+  components:
+    postgres:
+      port: 5433

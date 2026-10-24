@@ -1,0 +1,6 @@
+# Опечатка в метке worker: ни egress worker -> Postgres, ни ingress Postgres <- worker не совпадают
+networkPolicy:
+  components:
+    worker:
+      podSelector:
+        app.kubernetes.io/name: shop-wrker
